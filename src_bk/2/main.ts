@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf, TextFileView, Notice, Modal, App, Setting } from 'obsidian';
+import { Plugin, WorkspaceLeaf, TextFileView, Notice } from 'obsidian';
 import { Calendar } from '@fullcalendar/core';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
@@ -6,72 +6,15 @@ import * as yaml from 'js-yaml';
 
 export const WEEKPLAN_VIEW_TYPE = "weekplan-view";
 
-class TaskInputModal extends Modal {
-    resultTitle: string = "";
-    resultHours: string = "1.0";
-    roleName: string;
-    onSubmit: (title: string, hours: string) => void;
-
-    constructor(app: App, roleName: string, onSubmit: (title: string, hours: string) => void) {
-        super(app);
-        this.roleName = roleName;
-        this.onSubmit = onSubmit;
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.createEl("h2", { text: `「${this.roleName}」にタスクを追加` });
-
-        new Setting(contentEl)
-            .setName("タスク名")
-            .addText((text) =>
-                text.onChange((value) => {
-                    this.resultTitle = value;
-                })
-            );
-
-        new Setting(contentEl)
-            .setName("見積もり時間 (h)")
-            .setDesc("例: 1.5")
-            .addText((text) =>
-                text.setValue(this.resultHours)
-                    .onChange((value) => {
-                        this.resultHours = value;
-                    })
-            );
-
-        new Setting(contentEl)
-            .addButton((btn) =>
-                btn
-                    .setButtonText("追加する")
-                    .setCta()
-                    .onClick(() => {
-                        this.close();
-                        if (this.resultTitle.trim() !== "") {
-                            this.onSubmit(this.resultTitle, this.resultHours);
-                        }
-                    })
-            );
-    }
-
-    onClose() {
-        const { contentEl } = this;
-        contentEl.empty();
-    }
-}
-
 export class WeekplanView extends TextFileView {
     calendar: Calendar;
     yamlData: any;
-    visualContainer: HTMLElement;
-    sourceContainer: HTMLTextAreaElement;
     leftPanelEl: HTMLElement;
     draggable: Draggable | null = null;
-    isSourceMode: boolean = false;
 
     constructor(leaf: WorkspaceLeaf) {
         super(leaf);
-        this.yamlData = { insight: "", goals: [], events: [] };
+        this.yamlData = { ai_insight: "", goals: [], events: [] };
     }
 
     getViewType() { return WEEKPLAN_VIEW_TYPE; }
@@ -81,64 +24,55 @@ export class WeekplanView extends TextFileView {
         const container = this.contentEl;
         container.empty();
 
+        // 全体のコンテナを左右分割のFlexboxに設定
         container.style.display = 'flex';
-        container.style.flexDirection = 'column';
+        container.style.flexDirection = 'row';
         container.style.height = '100%';
         container.style.overflow = 'hidden';
 
-        const header = container.createEl('div', {
-            attr: { style: 'padding: 10px; border-bottom: 1px solid var(--background-modifier-border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;' }
-        });
-
-        const leftControls = header.createEl('div', { attr: { style: 'display: flex; gap: 10px;' } });
-        const syncBtn = leftControls.createEl('button', { text: '🔄 Outlook同期' });
-        const toggleModeBtn = header.createEl('button', { text: '</> ソースモード' });
-
-        const contentArea = container.createEl('div', {
-            attr: { style: 'flex-grow: 1; display: flex; overflow: hidden; position: relative;' }
-        });
-
-        this.visualContainer = contentArea.createEl('div', {
-            attr: { style: 'display: flex; flex-direction: row; height: 100%; width: 100%; overflow: hidden;' }
-        });
-
-        this.sourceContainer = contentArea.createEl('textarea', {
-            cls: 'weekplan-source-editor',
-            attr: { style: 'display: none; width: 100%; height: 100%; font-family: monospace; padding: 15px; resize: none; border: none; outline: none; background: var(--background-primary); color: var(--text-normal); font-size: 14px; line-height: 1.5;' }
-        });
-
-        this.leftPanelEl = this.visualContainer.createEl('div', {
+        // 🟢 左ペイン
+        this.leftPanelEl = container.createEl('div', {
             cls: 'weekplan-left-panel',
             attr: { style: 'width: 350px; flex-shrink: 0; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;' }
         });
 
-        const resizer = this.visualContainer.createEl('div', {
+        // 🟡 リサイザー（境界線）
+        const resizer = container.createEl('div', {
             cls: 'weekplan-resizer',
             attr: { style: 'width: 4px; cursor: col-resize; background-color: var(--background-modifier-border); transition: background-color 0.2s;' }
         });
+
         resizer.addEventListener('mouseenter', () => resizer.style.backgroundColor = 'var(--interactive-accent)');
         resizer.addEventListener('mouseleave', () => resizer.style.backgroundColor = 'var(--background-modifier-border)');
 
-        const rightPanelEl = this.visualContainer.createEl('div', {
+        // 🔵 右ペイン（カレンダーとヘッダー）
+        const rightPanelEl = container.createEl('div', {
             cls: 'weekplan-right-panel',
             attr: { style: 'flex-grow: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; min-width: 300px;' }
         });
 
+        // --- ドラッグで幅を変更するロジック ---
         let isResizing = false;
+
         resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
             document.body.style.cursor = 'col-resize';
             e.preventDefault();
         });
+
         document.addEventListener('mousemove', (e) => {
             if (!isResizing) return;
-            const containerRect = this.visualContainer.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
             const newWidth = e.clientX - containerRect.left;
+
             if (newWidth > 150 && newWidth < containerRect.width - 300) {
                 this.leftPanelEl.style.width = `${newWidth}px`;
             }
-            if (this.calendar) this.calendar.updateSize();
+            if (this.calendar) {
+                this.calendar.updateSize();
+            }
         });
+
         document.addEventListener('mouseup', () => {
             if (isResizing) {
                 isResizing = false;
@@ -146,27 +80,9 @@ export class WeekplanView extends TextFileView {
             }
         });
 
-        toggleModeBtn.addEventListener('click', async () => {
-            this.isSourceMode = !this.isSourceMode;
-            if (this.isSourceMode) {
-                this.sourceContainer.value = yaml.dump(this.yamlData);
-                this.visualContainer.style.display = 'none';
-                this.sourceContainer.style.display = 'block';
-                toggleModeBtn.innerText = '👁️ ビジュアルモード';
-            } else {
-                const newText = this.sourceContainer.value;
-                try {
-                    yaml.load(newText);
-                    if (this.file) await this.app.vault.modify(this.file, newText);
-                    this.sourceContainer.style.display = 'none';
-                    this.visualContainer.style.display = 'flex';
-                    toggleModeBtn.innerText = '</> ソースモード';
-                } catch (e) {
-                    new Notice('YAMLの構文エラーがあります。修正してください。');
-                    this.isSourceMode = true;
-                }
-            }
-        });
+        // --- ヘッダー（同期ボタン） ---
+        const header = rightPanelEl.createEl('div', { attr: { style: 'padding: 10px; border-bottom: 1px solid var(--background-modifier-border);' } });
+        const syncBtn = header.createEl('button', { text: '🔄 Outlook予定を取得' });
 
         syncBtn.addEventListener('click', async () => {
             new Notice('Outlook予定を取得中...');
@@ -176,34 +92,45 @@ export class WeekplanView extends TextFileView {
                 const adapter = this.app.vault.adapter as any;
                 const vaultPath = adapter.getBasePath();
                 const scriptPath = path.join(vaultPath, 'stub_fetch.py');
-                exec(`python3 "${scriptPath}"`, async (error: any, stdout: string, stderr: string) => {
-                    if (error) { new Notice('予定の取得に失敗しました'); return; }
+                const command = `python3 "${scriptPath}"`;
+
+                exec(command, async (error: any, stdout: string, stderr: string) => {
+                    if (error) {
+                        console.error('Python Error:', error, stderr);
+                        new Notice('予定の取得に失敗しました');
+                        return;
+                    }
                     try {
                         const newEvents = JSON.parse(stdout);
                         const currentData = this.yamlData || { events: [] };
                         if (!currentData.events) currentData.events = [];
+
                         currentData.events = currentData.events.filter((ev: any) => ev.type !== 'outlook');
                         currentData.events.push(...newEvents);
 
-                        // 🌟 追加：Outlook同期後も予定を開始時間順にソート
-                        currentData.events.sort((a: any, b: any) => {
-                            return new Date(a.start).getTime() - new Date(b.start).getTime();
-                        });
-
-                        if (this.file) await this.app.vault.modify(this.file, yaml.dump(currentData));
-                        new Notice('予定を同期しました！');
-                    } catch (e) { new Notice('データの解析に失敗しました'); }
+                        const newYaml = yaml.dump(currentData);
+                        if (this.file) {
+                            await this.app.vault.modify(this.file, newYaml);
+                            new Notice('予定を同期しました！');
+                        }
+                    } catch (e) {
+                        new Notice('データの解析に失敗しました');
+                    }
                 });
-            } catch (err) { new Notice('システムエラー'); }
+            } catch (err) {
+                new Notice('システムエラー: モジュール読み込み失敗');
+            }
         });
 
         const calendarEl = rightPanelEl.createEl('div', { attr: { style: 'flex-grow: 1; padding: 10px;' } });
+
+        // --- FullCalendarの初期化 ---
         this.calendar = new Calendar(calendarEl, {
             plugins: [timeGridPlugin, interactionPlugin],
             initialView: 'timeGridWeek',
             firstDay: 1,
-            editable: true,
-            droppable: true,
+            editable: true,     // カレンダー上での予定の移動・伸縮を許可
+            droppable: true,    // 外部（左ペイン）からのドロップを許可
             slotLabelFormat: { hour: 'numeric', minute: '2-digit', hour12: false },
             eventTimeFormat: { hour: 'numeric', minute: '2-digit', hour12: false },
             headerToolbar: { left: 'prev,next', center: 'title', right: '' },
@@ -211,28 +138,18 @@ export class WeekplanView extends TextFileView {
             slotMinTime: '08:00:00',
             slotMaxTime: '22:00:00',
             events: [],
-            eventReceive: async (info) => await this.handleEventChange(info.event, 'receive'),
-            eventDrop: async (info) => await this.handleEventChange(info.event, 'update'),
-            eventResize: async (info) => await this.handleEventChange(info.event, 'update'),
 
-            eventClick: async (info) => {
-                if (info.event.extendedProps?.type === 'outlook') {
-                    new Notice('Outlookの固定予定は変更できません。');
-                    return;
-                }
-
-                if (confirm(`「${info.event.title}」を未配置(Pool)に戻しますか？`)) {
-                    this.yamlData.events = this.yamlData.events.filter((e: any) => e.id !== info.event.id);
-                    if (this.yamlData.goals) {
-                        this.yamlData.goals.forEach((role: any) => {
-                            role.items?.forEach((task: any) => {
-                                if (task.id === info.event.id) task.status = 'pool';
-                            });
-                        });
-                    }
-                    if (this.file) await this.app.vault.modify(this.file, yaml.dump(this.yamlData));
-                    new Notice('タスクをPoolに戻しました。');
-                }
+            // ① 外部（左ペイン）から新しくドロップされた時
+            eventReceive: async (info) => {
+                await this.handleEventChange(info.event, 'receive');
+            },
+            // ② カレンダー内で時間を移動（ドラッグ）させた時
+            eventDrop: async (info) => {
+                await this.handleEventChange(info.event, 'update');
+            },
+            // ③ カレンダー内で予定の長さ（実績）を変えた時
+            eventResize: async (info) => {
+                await this.handleEventChange(info.event, 'update');
             }
         });
 
@@ -240,6 +157,7 @@ export class WeekplanView extends TextFileView {
         setTimeout(() => this.calendar.updateSize(), 100);
     }
 
+    // --- YAML保存用の共通処理（クラスの直下に配置） ---
     formatLocalISO(date: Date) {
         const pad = (n: number) => n.toString().padStart(2, '0');
         return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
@@ -248,6 +166,7 @@ export class WeekplanView extends TextFileView {
     async handleEventChange(event: any, action: 'receive' | 'update') {
         if (!this.file || !this.yamlData) return;
 
+        // 1. events配列の更新
         const eventIndex = this.yamlData.events.findIndex((e: any) => e.id === event.id);
         const newEventData = {
             id: event.id,
@@ -264,19 +183,21 @@ export class WeekplanView extends TextFileView {
             this.yamlData.events.push(newEventData);
         }
 
-        // 🌟 追加：カレンダーの操作後、予定を開始時間（時系列）順にソートする
-        this.yamlData.events.sort((a: any, b: any) => {
-            return new Date(a.start).getTime() - new Date(b.start).getTime();
-        });
-
+        // 2. 左ペイン（goals）のステータス更新
         if (action === 'receive' && this.yamlData.goals) {
             this.yamlData.goals.forEach((role: any) => {
                 role.items?.forEach((task: any) => {
-                    if (task.id === event.id) task.status = 'scheduled';
+                    if (task.id === event.id) {
+                        task.status = 'scheduled';
+                    }
                 });
             });
         }
-        if (this.file) await this.app.vault.modify(this.file, yaml.dump(this.yamlData));
+
+        // 3. YAMLファイルへの上書き保存
+        const newYaml = yaml.dump(this.yamlData);
+        await this.app.vault.modify(this.file, newYaml);
+        new Notice('予定を更新しました');
     }
 
     async onClose() {
@@ -285,20 +206,12 @@ export class WeekplanView extends TextFileView {
     }
 
     getViewData() {
-        if (this.isSourceMode) return this.sourceContainer.value;
         return yaml.dump(this.yamlData);
     }
 
     setViewData(data: string, clear: boolean) {
-        if (this.isSourceMode) {
-            if (this.sourceContainer.value !== data) {
-                this.sourceContainer.value = data;
-            }
-            return;
-        }
-
         try {
-            this.yamlData = yaml.load(data) || { insight: "", goals: [], events: [] };
+            this.yamlData = yaml.load(data) || { ai_insight: "", goals: [], events: [] };
 
             this.calendar.removeAllEvents();
             if (this.yamlData.events && Array.isArray(this.yamlData.events)) {
@@ -310,11 +223,12 @@ export class WeekplanView extends TextFileView {
                         end: ev.end,
                         backgroundColor: ev.color || '#3b82f6',
                         borderColor: ev.color || '#3b82f6',
-                        extendedProps: { type: ev.type }
                     });
                 });
             }
+
             this.renderLeftPanel();
+
         } catch (e) {
             console.error("YAML parse error:", e);
         }
@@ -322,51 +236,33 @@ export class WeekplanView extends TextFileView {
 
     renderLeftPanel() {
         this.leftPanelEl.empty();
-        if (this.draggable) this.draggable.destroy();
 
-        const insightText = this.yamlData.insight || this.yamlData.ai_insight;
-        if (insightText) {
+        if (this.draggable) {
+            this.draggable.destroy();
+        }
+
+        // --- エリアA：AIインサイト ---
+        if (this.yamlData.ai_insight) {
             const calloutEl = this.leftPanelEl.createEl('div', {
                 attr: { style: 'background-color: var(--background-secondary); border-left: 4px solid var(--interactive-accent); padding: 12px; border-radius: 4px;' }
             });
-            calloutEl.createEl('h4', { text: '💡 石の配置の考え方', attr: { style: 'margin: 0 0 8px 0; font-size: 14px; color: var(--text-normal);' } });
+            calloutEl.createEl('h4', { text: '💡 AI 作戦会議メモ', attr: { style: 'margin: 0 0 8px 0; font-size: 14px; color: var(--text-normal);' } });
 
-            const lines = insightText.split('\n');
+            const lines = this.yamlData.ai_insight.split('\n');
             lines.forEach((line: string) => {
                 calloutEl.createEl('p', { text: line, attr: { style: 'margin: 0 0 4px 0; font-size: 13px; color: var(--text-muted); line-height: 1.4;' } });
             });
         }
 
+        // --- エリアB：タスクツリー ---
         const treeContainer = this.leftPanelEl.createEl('div');
         treeContainer.createEl('h3', { text: '🎯 今週の目標とタスク', attr: { style: 'margin: 0 0 15px 0; border-bottom: 1px solid var(--background-modifier-border); padding-bottom: 5px;' } });
 
         if (this.yamlData.goals && Array.isArray(this.yamlData.goals)) {
             this.yamlData.goals.forEach((roleGroup: any) => {
-
-                const roleHeader = treeContainer.createEl('div', {
-                    attr: { style: 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;' }
-                });
-                roleHeader.createEl('span', { text: `▼ ${roleGroup.role}`, attr: { style: 'font-weight: bold; color: var(--text-normal);' } });
-
-                const addBtn = roleHeader.createEl('button', { text: '+ タスク', attr: { style: 'font-size: 11px; padding: 2px 8px; height: auto;' } });
-                addBtn.addEventListener('click', () => {
-                    new TaskInputModal(this.app, roleGroup.role, async (title, hoursStr) => {
-                        const hours = parseFloat(hoursStr) || 1.0;
-                        const newTask = {
-                            id: `task-${Date.now()}`,
-                            title: title,
-                            estimated_hours: hours,
-                            status: "pool"
-                        };
-
-                        if (!roleGroup.items) roleGroup.items = [];
-                        roleGroup.items.push(newTask);
-
-                        if (this.file) {
-                            await this.app.vault.modify(this.file, yaml.dump(this.yamlData));
-                            new Notice('タスクを追加しました！');
-                        }
-                    }).open();
+                treeContainer.createEl('div', {
+                    text: `▼ ${roleGroup.role}`,
+                    attr: { style: 'font-weight: bold; margin-bottom: 8px; color: var(--text-normal);' }
                 });
 
                 if (roleGroup.items && Array.isArray(roleGroup.items)) {
@@ -390,8 +286,10 @@ export class WeekplanView extends TextFileView {
                                 const endDate = new Date(eventData.end);
                                 const days = ['日', '月', '火', '水', '木', '金', '土'];
                                 const dayStr = days[startDate.getDay()];
+
                                 const startStr = `${startDate.getHours()}:${startDate.getMinutes().toString().padStart(2, '0')}`;
                                 const endStr = `${endDate.getHours()}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+
                                 timeString = ` <span style="color: var(--text-muted); font-size: 11px;">(${dayStr} ${startStr}-${endStr})</span>`;
                             }
                         } else if (task.status === 'pool') {
@@ -399,10 +297,13 @@ export class WeekplanView extends TextFileView {
                             li.classList.add('fc-event-draggable');
                             li.setAttribute('data-id', task.id);
                             li.setAttribute('data-title', task.title);
+
                             const hours = task.estimated_hours ? parseFloat(task.estimated_hours) : 1;
                             const h = Math.floor(hours);
                             const m = Math.round((hours - h) * 60);
-                            li.setAttribute('data-duration', `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+                            const durationStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                            li.setAttribute('data-duration', durationStr);
+
                             li.style.cursor = 'grab';
                         } else if (task.status === 'dropped') {
                             icon = '⚪';
@@ -411,8 +312,12 @@ export class WeekplanView extends TextFileView {
                         }
 
                         li.createEl('span', { text: icon, attr: { style: 'font-size: 12px; margin-top: 2px;' } });
+
                         const hoursStr = task.estimated_hours ? `[${task.estimated_hours}h] ` : '';
-                        const textSpan = li.createEl('span', { attr: { style: `opacity: ${opacity}; text-decoration: ${textDecoration}; color: var(--text-normal); line-height: 1.4;` } });
+
+                        const textSpan = li.createEl('span', {
+                            attr: { style: `opacity: ${opacity}; text-decoration: ${textDecoration}; color: var(--text-normal); line-height: 1.4;` }
+                        });
                         textSpan.innerHTML = `${hoursStr}${task.title}${timeString}`;
 
                         if (task.status === 'scheduled' && this.calendar) {
@@ -439,6 +344,7 @@ export class WeekplanView extends TextFileView {
             });
         }
 
+        // --- ドラッグ機能の初期化 ---
         this.draggable = new Draggable(this.leftPanelEl, {
             itemSelector: '.fc-event-draggable',
             eventData: function (eventEl) {
@@ -454,7 +360,7 @@ export class WeekplanView extends TextFileView {
     }
 
     clear() {
-        this.yamlData = { insight: "", goals: [], events: [] };
+        this.yamlData = { ai_insight: "", goals: [], events: [] };
         if (this.calendar) this.calendar.removeAllEvents();
         if (this.leftPanelEl) this.leftPanelEl.empty();
     }
@@ -470,7 +376,7 @@ export default class WeekplanPlugin extends Plugin {
             name: '今週の作戦会議ファイルを作成',
             callback: async () => {
                 const fileName = `2026-W08.weekplan`;
-                const fileContent = `week: "2026-W08"\ninsight: |\n  ここに石の配置の考え方や方針が記録されます。\ngoals:\n  - role: "サンプル役割"\n    items:\n      - id: "task-1"\n        title: "サンプルのタスク"\n        estimated_hours: 1.0\n        status: "pool"\nevents: []\n`;
+                const fileContent = `week: "2026-W08"\nai_insight: |\n  ここにAIとの作戦会議のサマリーや方針が記録されます。\ngoals:\n  - role: "サンプル役割"\n    items:\n      - id: "task-1"\n        title: "サンプルのタスク"\n        estimated_hours: 1.0\n        status: "pool"\nevents: []\n`;
                 const existingFile = this.app.vault.getAbstractFileByPath(fileName);
                 if (!existingFile) {
                     await this.app.vault.create(fileName, fileContent);
