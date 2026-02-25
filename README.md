@@ -1,90 +1,97 @@
-# Obsidian Sample Plugin
+# 🗓️ Obsidian Weekplan Plugin (AI協働タイムブロッキング)
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+このプラグインは、Obsidian上で動作する「7つの習慣」に準拠した週間タイムブロッキング・ツールです。
+単なる予定管理ではなく、**AI（GeminiやClaude等）を優秀な秘書として活用し、自分にとっての「大きな石（第2領域）」を確実に配置するための作戦会議システム**として設計されています。
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## ✨ 主な特徴 (Features)
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+* **🤖 AIとのシームレスな協働 (AI-Driven Planning):**
+* 自然言語のMarkdown表（今週の目標）をAIに渡し、専用のYAMLフォーマット（`.weekplan`）に変換させることで、スケジューリングのたたき台を一瞬で作成できます。
+* AIの「石の配置の考え方（Insight）」を画面上に表示し、AIの思考プロセスを確認しながら計画を練ることができます。
 
-## First time developing plugins?
 
-Quick starting guide for new plugin devs:
+* **🧩 直感的な予実管理 (Drag & Drop Interface):**
+* AIが配置を見送った「未配置タスク（🟡 Pool）」を、マウスのドラッグ＆ドロップでカレンダーの空き時間に直接配置できます。
+* カレンダー上の予定を伸縮させたり移動させたりすると、裏側のYAMLデータがリアルタイムで自動更新されます。
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
 
-## Releasing new releases
+* **🏢 会社の予定との完全統合 (Outlook Integration):**
+* ボタン一つでローカルの「クラシックOutlook」から直近の予定を取得し、カレンダー上にグレーのブロックとして自動展開します。（※Windows環境・Python連携必須）
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+* **🛡️ 柔軟な手動編集 (Source Mode & Quick Add):**
+* AIに頼らずとも、Obsidian純正のモーダルUIから「＋タスク追加」が可能です。
+* いつでもYAMLの直接編集（ソースモード）に切り替えられ、Obsidianの哲学である「生データへのアクセス」を保証します。
 
-## Adding your plugin to the community plugin list
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
 
-## How to use
+---
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+## 🚀 インストールと初期設定 (Setup)
 
-## Manually installing the plugin
+### 1. プラグインのインストール
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+1. このリポジトリのファイルを、ObsidianのVault内の `.obsidian/plugins/obsidian-weekplan/` フォルダに配置します。
+2. ターミナルで同フォルダに移動し、`npm install` と `npm run build` を実行します。
+3. Obsidianの設定 > コミュニティプラグイン から「Weekplan」を有効化します。
 
-## Improve code quality with eslint
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+### 2. Outlook連携の準備 (Windows環境のみ)
 
-## Funding URL
+会社のOutlook予定を同期するためには、Python環境が必要です。
 
-You can include funding URLs where people who use your plugin can financially support it.
+1. WindowsPCにPythonをインストールし、コマンドプロンプトで以下を実行します。
+```bash
+pip install pywin32
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
 ```
 
-If you have multiple URLs, you can also do:
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+2. 提供されている `fetch_outlook.py` を、**ObsidianのVaultの直下**（一番上の階層）に配置してください。
 
-## API Documentation
+---
 
-See https://docs.obsidian.md
+## 📖 基本的な使い方 (Workflow)
+
+このツールは、毎週の「作戦会議（プランニング）」で真価を発揮します。
+
+### Step 1: 作戦会議ファイルの作成
+
+Obsidianのコマンドパレット（`Ctrl/Cmd + P`）を開き、**「今週の作戦会議ファイルを作成」** を実行します。
+`2026-W08.weekplan` のような専用ファイルが生成され、2ペインのUIが開きます。
+
+### Step 2: 既存予定の同期
+
+画面右上の **「🔄 Outlook同期」** ボタンを押します。
+裏側でPythonが動き、Outlookの定例会議などがカレンダー上にセットされます。
+
+### Step 3: AIへのプロンプト送信
+
+「7つの習慣」に基づき、今週の役割と目標をMarkdownの表で整理します。
+その後、AI（Gemini等）に対して専用のプロンプト（※別紙 `AI_HANDOVER.md` 参照）と目標表を投げ、「今週のスケジュール案（YAML）」を作らせます。
+
+### Step 4: UIでの微調整（パズル）
+
+AIが出力したYAMLをコピーし、右上の **「</> ソースモード」** を押してペーストします。
+「👁️ ビジュアルモード」に戻ると、AIの提案が画面に反映されます。
+
+* **🟢 Scheduled:** すでにカレンダーに配置されたタスク。
+* **🟡 Pool:** 時間がなくてAIが配置を見送った（未配置の）タスク。左ペインからカレンダーの空き時間にドラッグ＆ドロップして配置できます。
+* 予定を変更したい場合は、カレンダー上のブロックを直接動かしてください。
+
+---
+
+## 🧠 設計思想 (Philosophy)
+
+**「1日の稼働の60%しかタスクを詰め込まない」**
+
+このツールは、スケジュールを隙間なく埋めることを目的としていません。
+マネージャー職特有の「突発的な割り込み」や「体調の波」を吸収するため、意図的に【空白（バッファ）】を残すことをAIへの最強の制約としています。
+
+「やらないこと（勇気ある見送り）」を可視化し、健康という最重要の器を守りながら、本当に大切な「第2領域」に集中するためのパートナーとしてご活用ください。
+
+---
+
+## 💻 開発情報
+
+* **動作環境:** Obsidian Desktop (Windows/Mac)
+* **依存関係:** FullCalendar (`@fullcalendar/core`, `@fullcalendar/timegrid`, `@fullcalendar/interaction`), `js-yaml`

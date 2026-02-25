@@ -3,6 +3,7 @@ import { Calendar } from '@fullcalendar/core';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
 import * as yaml from 'js-yaml';
+import { MyPluginSettings, DEFAULT_SETTINGS, SampleSettingTab } from './settings';
 
 export const WEEKPLAN_VIEW_TYPE = "weekplan-view";
 
@@ -221,17 +222,11 @@ export class WeekplanView extends TextFileView {
                     return;
                 }
 
-                if (confirm(`「${info.event.title}」を未配置(Pool)に戻しますか？`)) {
+                if (confirm(`予定枠「${info.event.title}」を削除しますか？`)) {
                     this.yamlData.events = this.yamlData.events.filter((e: any) => e.id !== info.event.id);
-                    if (this.yamlData.goals) {
-                        this.yamlData.goals.forEach((role: any) => {
-                            role.items?.forEach((task: any) => {
-                                if (task.id === info.event.id) task.status = 'pool';
-                            });
-                        });
-                    }
+                    this.updateTaskStatuses();
                     if (this.file) await this.app.vault.modify(this.file, yaml.dump(this.yamlData));
-                    new Notice('タスクをPoolに戻しました。');
+                    new Notice('予定枠を削除しました。');
                 }
             }
         });
@@ -245,12 +240,48 @@ export class WeekplanView extends TextFileView {
         return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
     }
 
+    updateTaskStatuses() {
+        if (!this.yamlData.goals) return;
+
+        const taskHours = new Map<string, number>();
+
+        this.yamlData.events?.forEach((ev: any) => {
+            if (ev.type === 'task') {
+                const taskId = ev.taskId || ev.id;
+                if (ev.start && ev.end) {
+                    const start = new Date(ev.start).getTime();
+                    const end = new Date(ev.end).getTime();
+                    const hours = (end - start) / (1000 * 60 * 60);
+                    taskHours.set(taskId, (taskHours.get(taskId) || 0) + hours);
+                }
+            }
+        });
+
+        this.yamlData.goals.forEach((role: any) => {
+            role.items?.forEach((task: any) => {
+                if (task.status === 'dropped') return;
+
+                const totalScheduled = taskHours.get(task.id) || 0;
+                const estimated = parseFloat(task.estimated_hours) || 1;
+
+                if (totalScheduled === 0) {
+                    task.status = 'pool';
+                } else if (totalScheduled < estimated) {
+                    task.status = 'partial';
+                } else {
+                    task.status = 'scheduled';
+                }
+            });
+        });
+    }
+
     async handleEventChange(event: any, action: 'receive' | 'update') {
         if (!this.file || !this.yamlData) return;
 
         const eventIndex = this.yamlData.events.findIndex((e: any) => e.id === event.id);
         const newEventData = {
             id: event.id,
+            taskId: event.extendedProps?.taskId || event.id,
             type: 'task',
             title: event.title,
             start: this.formatLocalISO(event.start),
@@ -269,13 +300,7 @@ export class WeekplanView extends TextFileView {
             return new Date(a.start).getTime() - new Date(b.start).getTime();
         });
 
-        if (action === 'receive' && this.yamlData.goals) {
-            this.yamlData.goals.forEach((role: any) => {
-                role.items?.forEach((task: any) => {
-                    if (task.id === event.id) task.status = 'scheduled';
-                });
-            });
-        }
+        this.updateTaskStatuses();
         if (this.file) await this.app.vault.modify(this.file, yaml.dump(this.yamlData));
     }
 
@@ -310,7 +335,7 @@ export class WeekplanView extends TextFileView {
                         end: ev.end,
                         backgroundColor: ev.color || '#3b82f6',
                         borderColor: ev.color || '#3b82f6',
-                        extendedProps: { type: ev.type }
+                        extendedProps: { type: ev.type, taskId: ev.taskId || ev.id }
                     });
                 });
             }
@@ -382,32 +407,39 @@ export class WeekplanView extends TextFileView {
                         let textDecoration = 'none';
                         let timeString = '';
 
+                        let totalScheduledHours = 0;
+                        if (task.status === 'scheduled' || task.status === 'partial') {
+                            const taskEvents = this.yamlData.events?.filter((e: any) => e.type === 'task' && (e.taskId === task.id || e.id === task.id)) || [];
+                            taskEvents.forEach((e: any) => {
+                                if (e.start && e.end) {
+                                    totalScheduledHours += (new Date(e.end).getTime() - new Date(e.start).getTime()) / (1000 * 60 * 60);
+                                }
+                            });
+                        }
+                        const estimated = task.estimated_hours ? parseFloat(task.estimated_hours) : 1;
+
                         if (task.status === 'scheduled') {
                             icon = '🟢';
-                            const eventData = this.yamlData.events?.find((e: any) => e.id === task.id);
-                            if (eventData && eventData.start) {
-                                const startDate = new Date(eventData.start);
-                                const endDate = new Date(eventData.end);
-                                const days = ['日', '月', '火', '水', '木', '金', '土'];
-                                const dayStr = days[startDate.getDay()];
-                                const startStr = `${startDate.getHours()}:${startDate.getMinutes().toString().padStart(2, '0')}`;
-                                const endStr = `${endDate.getHours()}:${endDate.getMinutes().toString().padStart(2, '0')}`;
-                                timeString = ` <span style="color: var(--text-muted); font-size: 11px;">(${dayStr} ${startStr}-${endStr})</span>`;
-                            }
-                        } else if (task.status === 'pool') {
-                            icon = '🟡';
-                            li.classList.add('fc-event-draggable');
-                            li.setAttribute('data-id', task.id);
-                            li.setAttribute('data-title', task.title);
-                            const hours = task.estimated_hours ? parseFloat(task.estimated_hours) : 1;
-                            const h = Math.floor(hours);
-                            const m = Math.round((hours - h) * 60);
-                            li.setAttribute('data-duration', `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
-                            li.style.cursor = 'grab';
+                            timeString = ` <span style="color: var(--text-muted); font-size: 11px;">(${Math.round(totalScheduledHours * 10) / 10}h/${estimated}h)</span>`;
+                        } else if (task.status === 'partial') {
+                            icon = '🌓';
+                            timeString = ` <span style="color: var(--text-muted); font-size: 11px;">(${Math.round(totalScheduledHours * 10) / 10}h/${estimated}h)</span>`;
                         } else if (task.status === 'dropped') {
                             icon = '⚪';
                             opacity = '0.5';
                             textDecoration = 'line-through';
+                        }
+
+                        if (task.status === 'pool' || task.status === 'partial') {
+                            if (task.status === 'pool') icon = '🟡';
+                            li.classList.add('fc-event-draggable');
+                            li.setAttribute('data-id', task.id);
+                            li.setAttribute('data-title', task.title);
+                            const remainingHours = Math.max(0.25, estimated - totalScheduledHours);
+                            const h = Math.floor(remainingHours);
+                            const m = Math.round((remainingHours - h) * 60);
+                            li.setAttribute('data-duration', `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+                            li.style.cursor = 'grab';
                         }
 
                         li.createEl('span', { text: icon, attr: { style: 'font-size: 12px; margin-top: 2px;' } });
@@ -415,23 +447,29 @@ export class WeekplanView extends TextFileView {
                         const textSpan = li.createEl('span', { attr: { style: `opacity: ${opacity}; text-decoration: ${textDecoration}; color: var(--text-normal); line-height: 1.4;` } });
                         textSpan.innerHTML = `${hoursStr}${task.title}${timeString}`;
 
-                        if (task.status === 'scheduled' && this.calendar) {
+                        if ((task.status === 'scheduled' || task.status === 'partial') && this.calendar) {
                             li.addEventListener('mouseenter', () => {
                                 li.style.backgroundColor = 'var(--background-modifier-hover)';
-                                const eventObj = this.calendar.getEventById(task.id);
-                                if (eventObj) {
-                                    eventObj.setProp('borderColor', 'var(--text-error)');
-                                    eventObj.setProp('backgroundColor', 'var(--interactive-accent-hover)');
-                                }
+                                const taskEvents = this.yamlData.events?.filter((e: any) => e.type === 'task' && (e.taskId === task.id || e.id === task.id)) || [];
+                                taskEvents.forEach((ev: any) => {
+                                    const eventObj = this.calendar.getEventById(ev.id);
+                                    if (eventObj) {
+                                        eventObj.setProp('borderColor', 'var(--text-error)');
+                                        eventObj.setProp('backgroundColor', 'var(--interactive-accent-hover)');
+                                    }
+                                });
                             });
                             li.addEventListener('mouseleave', () => {
                                 li.style.backgroundColor = 'transparent';
-                                const eventObj = this.calendar.getEventById(task.id);
-                                if (eventObj) {
-                                    const origColor = this.yamlData.events?.find((e: any) => e.id === task.id)?.color || '#3b82f6';
-                                    eventObj.setProp('borderColor', origColor);
-                                    eventObj.setProp('backgroundColor', origColor);
-                                }
+                                const taskEvents = this.yamlData.events?.filter((e: any) => e.type === 'task' && (e.taskId === task.id || e.id === task.id)) || [];
+                                taskEvents.forEach((ev: any) => {
+                                    const eventObj = this.calendar.getEventById(ev.id);
+                                    if (eventObj) {
+                                        const origColor = ev.color || '#3b82f6';
+                                        eventObj.setProp('borderColor', origColor);
+                                        eventObj.setProp('backgroundColor', origColor);
+                                    }
+                                });
                             });
                         }
                     });
@@ -442,12 +480,14 @@ export class WeekplanView extends TextFileView {
         this.draggable = new Draggable(this.leftPanelEl, {
             itemSelector: '.fc-event-draggable',
             eventData: function (eventEl) {
+                const taskId = eventEl.getAttribute('data-id');
                 return {
-                    id: eventEl.getAttribute('data-id'),
+                    id: taskId + '_' + Date.now().toString(),
                     title: eventEl.getAttribute('data-title'),
                     duration: eventEl.getAttribute('data-duration'),
                     backgroundColor: '#10b981',
-                    borderColor: '#10b981'
+                    borderColor: '#10b981',
+                    extendedProps: { type: 'task', taskId: taskId }
                 };
             }
         });
@@ -461,7 +501,12 @@ export class WeekplanView extends TextFileView {
 }
 
 export default class WeekplanPlugin extends Plugin {
+    settings!: MyPluginSettings;
+
     async onload() {
+        await this.loadSettings();
+        this.addSettingTab(new SampleSettingTab(this.app, this));
+
         this.registerView(WEEKPLAN_VIEW_TYPE, (leaf) => new WeekplanView(leaf));
         this.registerExtensions(['weekplan'], WEEKPLAN_VIEW_TYPE);
 
@@ -484,5 +529,13 @@ export default class WeekplanPlugin extends Plugin {
 
     onunload() {
         this.app.workspace.detachLeavesOfType(WEEKPLAN_VIEW_TYPE);
+    }
+
+    async loadSettings() {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    }
+
+    async saveSettings() {
+        await this.saveData(this.settings);
     }
 }
