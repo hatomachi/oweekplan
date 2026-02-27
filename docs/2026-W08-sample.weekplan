@@ -1,0 +1,240 @@
+week: 2026-W08
+insight: |
+  【今週の方針】稼働60%の法則を適用し、最大6.5時間の配置に留めました。
+  年間計画の作成を最優先とし、残りのタスクは勇気を持って見送っています。
+goals:
+  - role: プロマネ
+    items:
+      - id: task-1
+        title: 'Project Alpha: 完了条件洗い出し'
+        estimated_hours: 1
+        status: scheduled
+      - id: task-2
+        title: 'Project Alpha: テスト結果レビュー'
+        estimated_hours: 4
+        status: partial
+      - id: task-1771855954531
+        title: 社内改善PJT 定例資料作成
+        estimated_hours: 2
+        status: scheduled
+  - role: チームリーダー
+    items:
+      - id: task-3
+        title: 2026年の年間計画
+        estimated_hours: 4
+        status: partial
+      - id: task-4
+        title: 全テーマのスケジュール回収
+        status: scheduled
+events:
+  - id: outlook-stub-1
+    type: outlook
+    title: 休み
+    start: '2026-02-23T08:00:00'
+    end: '2026-02-23T22:00:00'
+    color: '#FF0000'
+  - id: outlook-stub-1
+    type: outlook
+    title: 開発定例 A
+    start: '2026-02-24T09:00:00'
+    end: '2026-02-24T10:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: チーム朝会
+    start: '2026-02-24T10:30:00'
+    end: '2026-02-24T11:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: 新規DB POCレビュー枠
+    start: '2026-02-24T13:00:00'
+    end: '2026-02-24T14:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: 開発定例 B
+    start: '2026-02-24T14:00:00'
+    end: '2026-02-24T15:00:00'
+    color: '#6b7280'
+  - id: task-1771855954531
+    type: task
+    title: 社内改善PJT 定例資料作成(前半)
+    start: '2026-02-24T14:30:00'
+    end: '2026-02-24T15:30:00'
+    color: '#10b981'
+  - id: outlook-stub-1
+    type: outlook
+    title: グループ定例
+    start: '2026-02-24T16:00:00'
+    end: '2026-02-24T17:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: 全社PJ 共創定例
+    start: '2026-02-24T17:00:00'
+    end: '2026-02-24T18:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: Project Alpha 定例
+    start: '2026-02-24T18:00:00'
+    end: '2026-02-24T19:00:00'
+    color: '#6b7280'
+  - id: task-4_1772150905718
+    taskId: task-4
+    type: task
+    title: 全テーマのスケジュール回収
+    start: '2026-02-24T19:30:00'
+    end: '2026-02-24T20:30:00'
+    color: '#10b981'
+  - id: outlook-stub-1
+    type: outlook
+    title: チーム朝会
+    start: '2026-02-25T10:30:00'
+    end: '2026-02-25T11:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: マネージャ定例
+    start: '2026-02-25T11:00:00'
+    end: '2026-02-25T12:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: BIツール ベンダー定例
+    start: '2026-02-25T13:00:00'
+    end: '2026-02-25T14:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: クラウド基盤支援定例
+    start: '2026-02-25T14:00:00'
+    end: '2026-02-25T14:30:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: バックアップ定例
+    start: '2026-02-25T15:00:00'
+    end: '2026-02-25T16:00:00'
+    color: '#6b7280'
+  - id: task-2_1772151136231
+    taskId: task-2
+    type: task
+    title: 'Project Alpha: テスト結果レビュー'
+    start: '2026-02-25T16:00:00'
+    end: '2026-02-25T17:00:00'
+    color: '#10b981'
+  - id: outlook-stub-1
+    type: outlook
+    title: BtoCサービス 開発定例
+    start: '2026-02-25T18:00:00'
+    end: '2026-02-25T18:30:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: グループ定例
+    start: '2026-02-26T10:00:00'
+    end: '2026-02-26T11:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: チーム朝会
+    start: '2026-02-26T11:00:00'
+    end: '2026-02-26T11:15:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: 社内改善PJT定例
+    start: '2026-02-26T11:30:00'
+    end: '2026-02-26T12:00:00'
+    color: '#6b7280'
+  - id: task-3_1772028032305
+    taskId: task-3
+    type: task
+    title: 2026年の年間計画（前半）
+    start: '2026-02-26T12:00:00'
+    end: '2026-02-26T12:30:00'
+    color: '#10b981'
+  - id: outlook-stub-1
+    type: outlook
+    title: ベンダーマネジメント定例
+    start: '2026-02-26T13:30:00'
+    end: '2026-02-26T14:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: プロトタイプ開発 ベンダー定例
+    start: '2026-02-26T14:00:00'
+    end: '2026-02-26T15:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: 開発定例 C (オフショア)
+    start: '2026-02-26T15:00:00'
+    end: '2026-02-26T16:00:00'
+    color: '#6b7280'
+  - id: task-3_1772028152324
+    taskId: task-3
+    type: task
+    title: 2026年の年間計画
+    start: '2026-02-26T16:00:00'
+    end: '2026-02-26T17:00:00'
+    color: '#10b981'
+  - id: task-2_1772151144764
+    taskId: task-2
+    type: task
+    title: 'Project Alpha: テスト結果レビュー'
+    start: '2026-02-26T17:00:00'
+    end: '2026-02-26T18:00:00'
+    color: '#10b981'
+  - id: task-1771855954531_1772151118496
+    taskId: task-1771855954531
+    type: task
+    title: 社内改善PJT 定例資料作成
+    start: '2026-02-26T18:00:00'
+    end: '2026-02-26T19:00:00'
+    color: '#10b981'
+  - id: task-1
+    type: task
+    title: 'Project Alpha: 完了条件洗い出し'
+    start: '2026-02-27T09:30:00'
+    end: '2026-02-27T10:30:00'
+    color: '#3b82f6'
+  - id: outlook-stub-1
+    type: outlook
+    title: チーム朝会
+    start: '2026-02-27T10:30:00'
+    end: '2026-02-27T10:45:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: サービスアプリ連携 定例
+    start: '2026-02-27T11:00:00'
+    end: '2026-02-27T11:30:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: 移行設計 引き継ぎ会
+    start: '2026-02-27T13:00:00'
+    end: '2026-02-27T14:00:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: リーダー定例
+    start: '2026-02-27T14:30:00'
+    end: '2026-02-27T15:30:00'
+    color: '#6b7280'
+  - id: outlook-stub-1
+    type: outlook
+    title: エンハンス月次定例
+    start: '2026-02-27T16:00:00'
+    end: '2026-02-27T17:00:00'
+    color: '#6b7280'
+  - id: task-3_1772028158264
+    taskId: task-3
+    type: task
+    title: 2026年の年間計画
+    start: '2026-02-27T17:30:00'
+    end: '2026-02-27T18:30:00'
+    color: '#10b981'

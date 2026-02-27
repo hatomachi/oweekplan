@@ -259,7 +259,7 @@ export class WeekplanView extends TextFileView {
 
         this.yamlData.goals.forEach((role: any) => {
             role.items?.forEach((task: any) => {
-                if (task.status === 'dropped') return;
+                if (task.status === 'dropped' || task.status === 'completed') return;
 
                 const totalScheduled = taskHours.get(task.id) || 0;
                 const estimated = parseFloat(task.estimated_hours) || 1;
@@ -424,10 +424,14 @@ export class WeekplanView extends TextFileView {
                         } else if (task.status === 'partial') {
                             icon = '🌓';
                             timeString = ` <span style="color: var(--text-muted); font-size: 11px;">(${Math.round(totalScheduledHours * 10) / 10}h/${estimated}h)</span>`;
-                        } else if (task.status === 'dropped') {
-                            icon = '⚪';
+                        } else if (task.status === 'completed') {
+                            icon = '☑️';
                             opacity = '0.5';
                             textDecoration = 'line-through';
+                        } else if (task.status === 'dropped') {
+                            icon = 'ー';
+                            opacity = '0.5';
+                            textDecoration = 'none';
                         }
 
                         if (task.status === 'pool' || task.status === 'partial') {
@@ -442,7 +446,23 @@ export class WeekplanView extends TextFileView {
                             li.style.cursor = 'grab';
                         }
 
-                        li.createEl('span', { text: icon, attr: { style: 'font-size: 12px; margin-top: 2px;' } });
+                        const iconSpan = li.createEl('span', { text: icon, attr: { style: 'font-size: 12px; margin-top: 2px; cursor: pointer; user-select: none;' } });
+                        iconSpan.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            if (task.status === 'completed') {
+                                task.status = 'dropped';
+                            } else if (task.status === 'dropped') {
+                                task.status = 'pool';
+                                this.updateTaskStatuses();
+                            } else {
+                                task.status = 'completed';
+                            }
+                            if (this.file) {
+                                await this.app.vault.modify(this.file, yaml.dump(this.yamlData));
+                            }
+                            this.renderLeftPanel();
+                        });
+
                         const hoursStr = task.estimated_hours ? `[${task.estimated_hours}h] ` : '';
                         const textSpan = li.createEl('span', { attr: { style: `opacity: ${opacity}; text-decoration: ${textDecoration}; color: var(--text-normal); line-height: 1.4;` } });
                         textSpan.innerHTML = `${hoursStr}${task.title}${timeString}`;
