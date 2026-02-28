@@ -184,7 +184,26 @@ export class WeekplanView extends TextFileView {
                         const currentData = this.yamlData || { events: [] };
                         if (!currentData.events) currentData.events = [];
                         currentData.events = currentData.events.filter((ev: any) => ev.type !== 'outlook');
-                        currentData.events.push(...newEvents);
+
+                        // 終日予定（時間指定なし等、24時間にまたがるもの）を除外する
+                        const validEvents = newEvents.filter((ev: any) => {
+                            if (ev.allDay) return false;
+                            if (ev.start && ev.end) {
+                                const startStr = ev.start;
+                                const endStr = ev.end;
+                                // 0:00始まりかつ、終わりが23:59, 24:00, もしくは翌0:00の場合
+                                if (startStr.includes('T00:00:00') && (endStr.includes('T23:59:') || endStr.includes('T24:00:') || endStr.includes('T00:00:00'))) {
+                                    return false;
+                                }
+                                // 時間差が23時間以上のものは丸一日ブロックと見なす
+                                const durationMs = new Date(ev.end).getTime() - new Date(ev.start).getTime();
+                                if (durationMs >= 23 * 60 * 60 * 1000) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        });
+                        currentData.events.push(...validEvents);
 
                         // 🌟 追加：Outlook同期後も予定を開始時間順にソート
                         currentData.events.sort((a: any, b: any) => {
@@ -209,8 +228,10 @@ export class WeekplanView extends TextFileView {
             eventTimeFormat: { hour: 'numeric', minute: '2-digit', hour12: false },
             headerToolbar: { left: 'prev,next', center: 'title', right: '' },
             allDaySlot: false,
-            slotMinTime: '08:00:00',
-            slotMaxTime: '22:00:00',
+            slotDuration: '00:15:00',
+            snapDuration: '00:15:00',
+            height: '100%',
+            scrollTime: '08:00:00',
             events: [],
             eventReceive: async (info) => await this.handleEventChange(info.event, 'receive'),
             eventDrop: async (info) => await this.handleEventChange(info.event, 'update'),
