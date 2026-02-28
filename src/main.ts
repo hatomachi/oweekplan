@@ -69,6 +69,7 @@ export class WeekplanView extends TextFileView {
     leftPanelEl: HTMLElement;
     draggable: Draggable | null = null;
     isSourceMode: boolean = false;
+    zoomIndex: number = 2; // ['01:00:00', '00:30:00', '00:15:00', '00:10:00'][2] = '00:15:00'
 
     constructor(leaf: WorkspaceLeaf) {
         super(leaf);
@@ -93,6 +94,8 @@ export class WeekplanView extends TextFileView {
 
         const leftControls = header.createEl('div', { attr: { style: 'display: flex; gap: 10px;' } });
         const syncBtn = leftControls.createEl('button', { text: '🔄 Outlook同期' });
+        const zoomOutBtn = leftControls.createEl('button', { text: '➖ 縮小' });
+        const zoomInBtn = leftControls.createEl('button', { text: '➕ 拡大' });
         const toggleModeBtn = header.createEl('button', { text: '</> ソースモード' });
 
         const contentArea = container.createEl('div', {
@@ -215,6 +218,23 @@ export class WeekplanView extends TextFileView {
                     } catch (e) { new Notice('データの解析に失敗しました'); }
                 });
             } catch (err) { new Notice('システムエラー'); }
+        });
+
+        const durations = ['01:00:00', '00:30:00', '00:15:00', '00:10:00'];
+        this.zoomIndex = 2; // 初期値 '00:15:00'
+
+        zoomInBtn.addEventListener('click', () => {
+            if (this.zoomIndex < durations.length - 1) {
+                this.zoomIndex++;
+                this.calendar.setOption('slotDuration', durations[this.zoomIndex]);
+            }
+        });
+
+        zoomOutBtn.addEventListener('click', () => {
+            if (this.zoomIndex > 0) {
+                this.zoomIndex--;
+                this.calendar.setOption('slotDuration', durations[this.zoomIndex]);
+            }
         });
 
         const calendarEl = rightPanelEl.createEl('div', { attr: { style: 'flex-grow: 1; padding: 10px;' } });
